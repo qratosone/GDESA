@@ -48,19 +48,23 @@ nosetests.xml
 coverage.xml
 *.cover
 *.py,cover
+*.json
 .hypothesis/
 .pytest_cache/
-
+data/
 # Translations
 *.mo
 *.pot
-
+.vector_cache/
 # Django stuff:
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-
+doc.emb
+query.emb
+rel_feat.csv
+*.data
 # Flask stuff:
 instance/
 .webassets-cache
@@ -127,3 +131,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.vscode/

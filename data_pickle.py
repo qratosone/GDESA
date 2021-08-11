@@ -47,7 +47,7 @@ for qid in train_sample:
         #for pair in sample[1]:
             #print('pair is {}>{} with weight {}'.format(pair[1], pair[0], pair[2]))
 print("actual longest context length:",longest_context_length)
-longest_context_length=24
+longest_context_length=50
 sample_dic={}
 for qid in train_sample:
     if qid not in sample_dic.keys():
@@ -130,8 +130,8 @@ print('building...')
 debug_flag=False
 count=0
 import os
-if not os.path.exists('pickle_bert_subtopic'):
-    os.mkdir('pickle_bert_subtopic')
+if not os.path.exists('pickle_train'):
+    os.mkdir('pickle_train')
 print('data file:',current_filename)
 import gzip
 for qid in sample_dic.keys():
@@ -148,7 +148,7 @@ for qid in sample_dic.keys():
         #import pdb;pdb.set_trace()
         sample_dic_simple={'arr_neg':arr_neg,'arr_pos':arr_pos,'weight':weight,'pad_seq':pad_seq,'querys':querys}
         sample_dic_list.append(sample_dic_simple)
-    filepath='pickle_bert_subtopic/'+str(qid)+'.pkl.gz'
+    filepath='pickle_train/'+str(qid)+'.pkl.gz'
     with gzip.open(filepath,'wb') as f:
         pickle.dump(sample_dic_list,f)
     count+=1

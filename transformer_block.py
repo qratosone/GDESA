@@ -18,6 +18,7 @@ def attention(query,key,value,mask=None,dropout=None):
     #print('mask:',mask.shape)
     if mask is not None:
         scores = scores.masked_fill(mask, -1e9)
+    #print(scores)
     p_attn = F.softmax(scores,dim = -1)
     if dropout is  not None:
         p_attn = dropout(p_attn)
@@ -70,6 +71,7 @@ def subsequent_mask(size):
     return torch.from_numpy(subsequent_mask) == 0
 def subsequent_mask_fake(size):
     attn_shape = (1,size,size)
+    #print("fake mask")
     subsequent_mask = np.ones(attn_shape).astype('uint8')
     return torch.from_numpy(subsequent_mask) == 0
 class EncoderLayer(nn.Module):
@@ -148,7 +150,7 @@ class MultiHeadedAttention(nn.Module):
         x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.h * self.d_k)
         return self.linears[-1](x)
 class TransformerEncoder(nn.Module):
-    def __init__(self, num_layers = 1, hidden_size = 100,  num_head = 2, d_ff = 400,dropout = 0.1,max_len=50):
+    def __init__(self, num_layers , hidden_size,  num_head, d_ff,dropout,max_len=50):
         super(TransformerEncoder, self).__init__()
         c=copy.deepcopy
         attn = MultiHeadedAttention(num_head, hidden_size)
@@ -157,21 +159,61 @@ class TransformerEncoder(nn.Module):
         self.encoder=Encoder(EncoderLayer(hidden_size, c(attn), c(ff), dropout), num_layers)
 
 
-    def forward(self, input,input_mask,posenc=True,for_subtopic=False):
-        if not for_subtopic:
+    def forward(self, input,input_mask,posenc=True,predict=False):
+        if not predict:
             input_seq_mask=Batch.make_std_mask(input_mask,pad=0)
         else:
+            #print("use predict")
             input_seq_mask=Batch.make_std_mask_fake(input_mask,pad=0)
         #print('emb pos')
         B, L, H = input.size()
-        #print(input.size())
+        #print('mask:',input_seq_mask)
         if posenc:
             P = self.position(torch.arange(L, dtype=torch.long, device=input.device).view(1, L))
             #print(P.size())
             input=input+P
         return self.encoder(input,input_seq_mask)
+class DecoderLayer(nn.Module):
+    "Decoder is made of self-attn, src-attn, and feed forward (defined below)"
+    def __init__(self, size, self_attn, feed_forward, dropout):
+        super(DecoderLayer, self).__init__()
+        self.size = size
+        self.src_attn = self_attn
+        self.feed_forward = feed_forward
+        self.sublayer = clones(SublayerConnection(size, dropout), 2)
+ 
+    def forward(self, x, memory):
+        "Follow Figure 1 (right) for connections."
+        m = memory
+        x = self.sublayer[0](x, lambda x: self.src_attn(x, m, m, None))
+        return self.sublayer[1](x, self.feed_forward)
+class Decoder(nn.Module):
+    "Generic N layer decoder with masking."
+    def __init__(self, layer, N):
+        super(Decoder, self).__init__()
+        self.layers = clones(layer, N)
+        self.norm = LayerNorm(layer.size)
+        
+    def forward(self, doc, query):
+        for layer in self.layers:
+            x = layer(doc, query)
+        return self.norm(x)
+class TransformerDecoder(nn.Module):
+    def __init__(self, num_layers = 1, hidden_size = 100,  num_head = 2, d_ff = 400,dropout = 0.1,max_len=50):
+        super(TransformerDecoder, self).__init__()
+        c=copy.deepcopy
+        attn = MultiHeadedAttention(num_head, hidden_size)
+        ff = PositionwiseFeedForward(hidden_size, d_ff, dropout)
+        self.decoder=Decoder(DecoderLayer(hidden_size, c(attn), c(ff), dropout), num_layers)
 
 
+    def forward(self, input_doc,input_query,posenc=True,for_subtopic=False):
+        #input_seq_mask=Batch.make_std_mask(input_mask,pad=0)
+        #print('emb pos')
+        B, L, H = input_doc.size()
+        #print(input.size())
+        #print('mask:',input_seq_mask)
+        return self.decoder(input_doc,input_query)
 class Batch:
     "此对象用于在训练时进行已屏蔽的批数据处理"
 
@@ -215,11 +257,18 @@ def data_gen(V,batch,nbatches):
         yield Batch(src,tgt,0)
 if __name__=="__main__":
     V=100
-    model =TransformerEncoder(num_layers=1)
+    model =TransformerDecoder(num_layers=1,hidden_size=100)
     handler=data_gen(V=V,batch=32,nbatches=11)
     batch=next(handler)
     d_model=100
     emb=nn.Embedding(V,d_model)
-    trg_emb=emb(batch.trg.long())
-    out = model.forward(trg_emb,batch.trg_mask)
-    print(out.shape)
+    src_emb=emb(batch.src.long())
+
+    #out = model.forward(src_emb,batch.src_mask)
+    #print(out.shape)
+    query_length=11
+    fakequery=torch.ones([1,query_length,d_model])
+    doc_length=40
+    fakedoc=torch.ones([1,doc_length,d_model])
+    result,_=attention(fakedoc,fakequery,fakequery)
+    print(result.shape)
