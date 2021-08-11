@@ -31,5 +31,12 @@ class DictDataset(Dataset):
         query.requires_grad=False
         mask_query=(query!=1)
         mask_query.requires_grad=False
-        return tensor_neg,tensor_pos,query,weight,mask_doc,mask_query
+        sum_queries=torch.sum(mask_query==1).numpy()-1
+        if sum_queries!=0:
+            subquery_weight=1.0/sum_queries
+        else:
+            subquery_weight=0.1
+        query_weights=[1]+[subquery_weight]*10#max_subtopic=10
+        query_weights=torch.Tensor(query_weights)
+        return tensor_neg,tensor_pos,query,weight,mask_doc,mask_query,query_weights
 
