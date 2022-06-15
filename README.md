@@ -1,5 +1,12 @@
 # GDESA: Greeedy Diversity Encoder with Self-Attention for Search Result Diversification
 
+### Notes
+This repo provides code, retrieval results, and trained models for our following papers:
+
+- [GDESA: Greedy Diversity Encoder with Self-Attention for Search Results Diversification](https://dl.acm.org/doi/10.1145/3544103). 
+- The previous version is [Diversifying Search Results using Self-Attention Network](https://dl.acm.org/doi/10.1145/3340531.3411914)
+
+
 ### Instructions
 Trained models and baseline runs are listed in `models/` and `baselines/`.
 
